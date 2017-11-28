@@ -1,0 +1,78 @@
+.wrapper {
+  width: 1008px;
+  height: 580px;
+}
+
+.board {
+  height: 580px;
+  width: 660px;
+  float: left;
+}
+
+.cell {
+  height: 20px;
+  width: 20px;
+  display: inline-block;
+  background: #ACACAC;
+}
+.dungeon {
+  background-color: #D5F9E1;
+}
+.row {
+  width: 660px;
+  height: 20px
+}
+.health {
+  background-color: #10CD42;
+}
+.easyEnemies {
+  background-color: #e57373;
+}
+.middleEnemies {
+  background-color: #c62828;
+}
+.weapon {
+  background-color: #ff5722;
+}
+.hero {
+  background-color: #1a237e
+}
+.portal {
+  background-color: #9c27b0;
+}
+.boss {
+  background-color: #ffff00;
+}
+.gameInfo {
+  float: left;
+  margin-left: 20px;
+  background-color: #80deea;
+  color: #000;
+  padding: 10px;
+  border-radius: 5px;
+  width: 300px;
+}
+.gameInfo h2 {
+  margin-bottom: 0px;
+}
+.gameInfo p {
+  font-size: 20px;
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+.gameInfo div {
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+.gameInfo .cell {
+  margin-bottom: -6px;
+}
+.dark {
+  background-color: #000;
+}
+button {
+  float: left;
+  margin-left: 20px;
+  margin-top: 20px;
+  width: 114px;
+}
