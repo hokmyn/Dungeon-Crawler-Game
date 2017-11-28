@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="application-name" content="Dungeon-Crawler-Game" />
+    <meta name="author" content="Denis Kalinin" />
+    <title>Dungeon-Crawler-Game</title>
+    <!-- stylesheets -->    
+    <link rel="stylesheet" href="css/main.css">
+</head>
+
+<body>
+    <div id = "app"></div>
+    <!-- Javascript -->
+    <script src="https://unpkg.com/babel-core@5.8.38/browser.min.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react-dom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.6/marked.min.js"></script>
+    <script type="text/babel">
+      const boardWidth = 33,
+      boardHeight = 29,
+      minGap = 2,
+      easyEnemyHealth = 15,
+      middleEnemyHealth = 25;      
+let rndObj = {},
+    nextRndObj = {},
+    dungeonsGrid,
+    startFirstAisle,
+    startSecondAisle,
+    maxHeight,
+    minHeight,
+    arr1 = [],
+    isDungeonsRow,
+    lastEmptyRow,
+    isVertAisles = [],
+    currentRow = 0,
+    itemsQuantity = {},
+    dungeonsCoord,
+    healthCoord,
+    easyEnemiesCoord = [],
+    middleEnemiesCoord = [],
+    weaponCoord = [],
+    heroCoord,
+    litArray = [],
+    portalCoord,
+    bossCoord,
+    allItems = [],
+    heroHealth,
+    bossHealth = 100,
+    dungeonsHealth = [],
+    dungeonsEnemy = [],
+    resultMessage,
+    div,
+    grid,
+    k,
+    n;
+
+
+function randomInteger(min, max){
+  return Math.floor(min + Math.random() * (max + 1 - min));
+}
+
+function createDungeonsArr() {
+  let rndArr = [];
+  let rnd;
+  for(n = 0; n < 3; n++) {
+    rndArr[n] = [];
+    for(k = 0; k < 3; k++) {
+      if(k == 0) {
+        switch(n) {
+          case 0:            
+            rndArr[0].push(randomInteger(2, 4));
+            break;
+          case 1:
+            rnd = rndArr[0][0] + rndArr[0][1];
+            rndArr[1].push(randomInteger(rnd + 2, rnd + 5));
+            break;
+          case 2:
+            rnd = rndArr[1][0] + rndArr[1][1];
+            rndArr[2].push(randomInteger(rnd + 2, rnd + 4));            
+        }
+      } else {
+        rndArr[n].push(randomInteger(4, 7));
+      }      
+    }
+  }  
+  return rndArr;
+}
+
+class Board extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      level: 0,
+      heroHealth: 100,
+      dungeonsCoord: [],
+      healthCoord: [],
+      weaponCoord: [],
+      easyEnemiesCoord: [],
+      middleEnemiesCoord: [],
+      heroCoord: [],
+      weapon: "stick",
+      damage: 1,
+      resultMessage: '',
+      portal: false,
+      portalCoord: [],
+      boss: false,
+      bossCoord: [],
+      isDarkness: true,
+      litArray: []
+    }
+    this.onClick = this.onClick.bind(this);
+  }
+  
+  onClick() {
+    this.setState({
+      isDarkness: !this.state.isDarkness
+    });
+  }
+  
+  addItems(i, j, k) {
+    if(i > boardHeight / 3 && randomInteger(0, 30) < 2 && itemsQuantity.health > 0 && !dungeonsHealth[k] && allItems.indexOf(i + "|" + j) == -1) {      
+      itemsQuantity.health--;
+      allItems.push(i + '|' + j);
+      healthCoord.push(i + '|' + j);
+      dungeonsHealth[k] = true;
+    } else if(i > 4 && randomInteger(0, 15) < 2 && itemsQuantity.easyEnemies > 0 && !dungeonsEnemy[k] && allItems.indexOf(i + "|" + j) == -1) {
+      itemsQuantity.easyEnemies--;
+      allItems.push(i + '|' + j);
+      easyEnemiesCoord.push(i + '|' + j);
+      dungeonsEnemy[k] = true;
+    } else if(i > 2 && randomInteger(0, 20) < 2 && itemsQuantity.middleEnemies > 0 && !dungeonsEnemy[k] && allItems.indexOf(i + "|" + j) == -1) {
+      itemsQuantity.middleEnemies--;
+      allItems.push(i + '|' + j);
+      middleEnemiesCoord.push(i + '|' + j);
+      dungeonsEnemy[k] = true;
+    } else if(i > boardHeight / 2 && randomInteger(0, 25) < 2 && itemsQuantity.weapon > 0 && allItems.indexOf(i + "|" + j) == -1) {
+      itemsQuantity.weapon--;
+      allItems.push(i + '|' + j);
+      weaponCoord.push(i + '|' + j);
+    } else if(i > boardHeight / 2 && randomInteger(0, 25) < 2 && itemsQuantity.hero > 0 && allItems.indexOf(i + "|" + j) == -1) {
+      itemsQuantity.hero--;
+      allItems.push(i + '|' + j);
+      heroCoord.push(i + '|' + j);
+    } else if(itemsQuantity.portal > 0 && randomInteger(0, 25) < 2 && allItems.indexOf(i + "|" + j) == -1) {
+      itemsQuantity.portal--;
+      allItems.push(i + '|' + j);
+      portalCoord.push(i + '|' + j);
+    } else if(this.state.level == 2 && itemsQuantity.boss > 0 && randomInteger(0, 25) < 2 && allItems.indexOf(i + "|" + j) == -1) {
+      itemsQuantity.boss--;
+      allItems.push(i + '|' + j);
+      bossCoord.push(i + '|' + j);
+    }
+  }
+
+  makeDungeonsRow(i, j, obj) {
+    for(k = 0; k < 3; k++) {
+      if(j >= obj.dungeons[k][0] && j <= obj.dungeons[k][0] + obj.dungeons[k][1] && i <= lastEmptyRow + obj.dungeons[k][2] && obj.dungeons[k][0] + obj.dungeons[k][1] < boardWidth - 1) {
+        dungeonsCoord.push(i + "|" + j);
+        this.addItems(i, j, k);
+        break;
+      }
+    }
+  }
+
+  makeVertAisles(i, j, obj, nextObj) {
+    if(Object.keys(nextObj).length > 0) {
+      if(i > currentRow) {
+        isVertAisles = [false, false, false];
+      }
+      for(k = 0; k < 3; k++) {
+        if(j >= obj.dungeons[k][0] && j <= obj.dungeons[k][0] + obj.dungeons[k][1] && j >= nextObj.dungeons[k][0] && j <= nextObj.dungeons[k][0] + nextObj.dungeons[k][1] && !isVertAisles[k]) {
+          isVertAisles[k] = true;
+          currentRow = i;
+          dungeonsCoord.push(i + "|" + j);
+        }
+      }
+    }
+  }
+
+  makeDungeonsGrid(i, j, obj, nextObj) {
+  
+  //make dungeons with items
+  if(isDungeonsRow) {
+    this.makeDungeonsRow(i, j, obj);        
+    if(i == maxHeight + lastEmptyRow + 1) {
+      isDungeonsRow = false;
+      dungeonsHealth = [false, false, false];
+      dungeonsEnemy = [false, false, false];
+    }
+  }
+  // make horizontals aisles
+  if(i == lastEmptyRow + obj.startFirstAisle && j > obj.dungeons[0][0] + obj.dungeons[0][1] && j < obj.dungeons[1][0]) {          
+    dungeonsCoord.push(i + "|" + j);
+  }
+  if(i == lastEmptyRow + obj.startSecondAisle && j > obj.dungeons[1][0] + obj.dungeons[1][1] && j < obj.dungeons[2][0]) {            
+    dungeonsCoord.push(i + "|" + j);
+  }
+  //make vertical aisles
+  this.makeVertAisles(i, j, obj, nextObj);
+}
+  
+  calcLitArray(coords) {
+    let yHeroCoord = parseInt(coords[0].split("|")[0]);
+    let xHeroCoord = parseInt(coords[0].split("|")[1]);
+    return [`${yHeroCoord - 3}|${xHeroCoord}`,
+      `${yHeroCoord - 2}|${xHeroCoord - 1}`,`${yHeroCoord - 2}|${xHeroCoord}`, `${yHeroCoord - 2}|${xHeroCoord + 1}`,
+            `${yHeroCoord - 1}|${xHeroCoord - 2}`,`${yHeroCoord - 1}|${xHeroCoord - 1}`,`${yHeroCoord - 1}|${xHeroCoord}`,`${yHeroCoord - 1}|${xHeroCoord + 1}`, `${yHeroCoord - 1}|${xHeroCoord + 2}`,
+            `${yHeroCoord}|${xHeroCoord - 3}`,`${yHeroCoord}|${xHeroCoord - 2}`,`${yHeroCoord}|${xHeroCoord - 1}`,`${yHeroCoord}|${xHeroCoord}`, `${yHeroCoord}|${xHeroCoord + 1}`, `${yHeroCoord}|${xHeroCoord + 2}`, `${yHeroCoord}|${xHeroCoord + 3}`,
+            `${yHeroCoord + 1}|${xHeroCoord - 2}`,`${yHeroCoord + 1}|${xHeroCoord - 1}`,`${yHeroCoord + 1}|${xHeroCoord}`,`${yHeroCoord + 1}|${xHeroCoord + 1}`, `${yHeroCoord + 1}|${xHeroCoord + 2}`,
+            `${yHeroCoord + 2}|${xHeroCoord - 1}`, `${yHeroCoord + 2}|${xHeroCoord}`, `${yHeroCoord + 2}|${xHeroCoord + 1}`,
+           `${yHeroCoord + 3}|${xHeroCoord}`];
+  }
+  
+  moveHero(e) {
+    let weapon,
+        nextHeroCoord,
+        index;
+    let row = heroCoord[0].split("|")[0];
+    let col = heroCoord[0].split("|")[1];
+    e.preventDefault();
+    switch(e.keyCode) {
+      case 37:
+        if(col > 2) {
+          col--;
+        }
+        break;
+      case 38:
+        if(row > 1) {
+          row--;
+        }
+        break;
+      case 39:
+        if(col < boardWidth - 1) {
+          col++;
+        }
+        break;
+      case 40:
+        if(row < boardHeight) {
+          row++;
+        }
+        break;
+    }
+    nextHeroCoord = row + "|" + col;
+    if(healthCoord.indexOf(nextHeroCoord) != -1) {
+      index = healthCoord.indexOf(nextHeroCoord);
+      healthCoord.splice(index, 1);
+      heroHealth += 10;
+      heroCoord[0] = nextHeroCoord;
+      litArray = this.calcLitArray(heroCoord);
+      resultMessage = "Health +10";
+      this.setState({
+        heroCoord: heroCoord,
+        healthCoord: healthCoord,
+        heroHealth: heroHealth,
+        resultMessage: resultMessage,
+        litArray: litArray
+      });
+    } else if(weaponCoord.indexOf(nextHeroCoord) != -1) {
+      weaponCoord = [];
+      switch(this.state.level) {
+        case 1:
+          weapon = "war axe";
+          break;
+        case 2:
+          weapon = "sword";
+          break;
+        case 3:
+          weapon = "bastard sword";
+      }
+      resultMessage = "You picked up " + weapon;
+      heroCoord[0] = nextHeroCoord;
+      litArray = this.calcLitArray(heroCoord);
+      this.setState({
+        heroCoord: heroCoord,
+        weaponCoord: weaponCoord,
+        weapon: weapon,
+        damage: this.state.damage + 2,
+        resultMessage: resultMessage,
+        litArray: litArray
+      });
+    } else if(easyEnemiesCoord.indexOf(nextHeroCoord) != -1 || middleEnemiesCoord.indexOf(nextHeroCoord) != -1) {
+      resultMessage = '';
+      let enemyHealth = easyEnemiesCoord.indexOf(nextHeroCoord) != -1 ? easyEnemyHealth : middleEnemyHealth;
+      while(true) {
+        if(heroHealth > 0) {
+          enemyHealth -= randomInteger(1,3) * this.state.damage;
+          if(enemyHealth > 0) {
+            heroHealth -= randomInteger(8,10);
+          } else {
+            resultMessage = 'Enemy defeated';
+            break;
+          }
+        } else {
+          resultMessage = 'You loose!';
+          heroCoord = [];
+          break;
+        }
+      }
+      if(heroHealth > 0) {
+        if(easyEnemiesCoord.indexOf(nextHeroCoord) != -1) {
+          index = easyEnemiesCoord.indexOf(nextHeroCoord);
+          easyEnemiesCoord.splice(index, 1);
+        } else {
+          index = middleEnemiesCoord.indexOf(nextHeroCoord);
+          middleEnemiesCoord.splice(index, 1);
+        }
+        heroCoord[0] = nextHeroCoord;
+        litArray = this.calcLitArray(heroCoord);
+        if(easyEnemiesCoord.length == 0 && middleEnemiesCoord.length == 0) {
+          if(this.state.level < 3) {
+            this.setState({
+              portal: true
+            });
+          } else {
+            this.setState({
+              boss: true
+            });
+          }
+        } else {
+          this.setState({
+            heroCoord: heroCoord,
+            easyEnemiesCoord: easyEnemiesCoord,
+            middleEnemiesCoord: middleEnemiesCoord,
+            heroHealth: heroHealth,
+            resultMessage: resultMessage,
+            litArray: litArray
+          });
+        }
+      } else {
+        this.setState({
+          resultMessage: resultMessage,
+          heroCoord: []
+        });
+      }
+    } else if(this.state.portal && portalCoord.indexOf(nextHeroCoord) != -1) {
+        this.startGame();         
+      } else if(bossCoord.indexOf(nextHeroCoord) != -1) {
+          while(true) {
+            if(heroHealth > 0) {
+              bossHealth -= randomInteger(2,4) * this.state.damage;
+              if(bossHealth > 0) {
+                heroHealth -= randomInteger(10,15);
+              } else {
+                resultMessage = 'You win!';
+                break;
+              }
+            } else {
+              resultMessage = 'You loose!';
+              break;
+            }
+          }
+          window.removeEventListener('keydown', this.moveHero);
+          if(heroHealth > 0) {
+            this.setState({
+              resultMessage: resultMessage,
+              heroHealth: heroHealth,
+              bossCoord: []
+            });
+          } else {
+            this.setState({
+              resultMessage: resultMessage,
+              heroHealth: 0,
+              heroCoord: []
+            });
+          }
+      } else if(dungeonsCoord.indexOf(nextHeroCoord) != -1) {
+      heroCoord[0] = nextHeroCoord;
+      litArray = this.calcLitArray(heroCoord);
+      this.setState({
+        heroCoord: heroCoord,
+        litArray: litArray
+      });
+    }
+  }
+  
+  startGame() {
+    isDungeonsRow = true;
+    dungeonsHealth = [false, false, false];
+    dungeonsEnemy = [false, false, false];
+    isVertAisles = [false, false, false];
+    lastEmptyRow = 0;
+    dungeonsCoord = [];
+    heroCoord = [];
+    healthCoord = [];
+    portalCoord = [];
+    allItems = [];
+    
+    rndObj = {
+      dungeons: createDungeonsArr(),      
+      startFirstAisle: randomInteger(2, 4),
+      startSecondAisle: randomInteger(2, 4)
+    }
+    
+    maxHeight = Math.max(rndObj.dungeons[0][2], rndObj.dungeons[1][2], rndObj.dungeons[2][2]);
+    minHeight = Math.min(rndObj.dungeons[0][2], rndObj.dungeons[1][2], rndObj.dungeons[2][2]);
+    itemsQuantity.weapon = 1;
+    itemsQuantity.hero = 1;
+    itemsQuantity.portal = 1;
+    itemsQuantity.boss = 1;
+    switch(this.state.level) {
+      case 0:
+        itemsQuantity.health = 5;
+        itemsQuantity.easyEnemies = 5;
+        itemsQuantity.middleEnemies = 0;
+        break;
+      case 1:
+        itemsQuantity.health = 4;
+        itemsQuantity.easyEnemies = 5;
+        itemsQuantity.middleEnemies = 2;
+        break;
+      case 2:
+        itemsQuantity.health = 3;
+        itemsQuantity.easyEnemies = 5;
+        itemsQuantity.middleEnemies = 3;
+        break;
+    }
+    heroHealth = 100;
+    
+    arr1.map((item, i) => {
+      if(i > maxHeight + minGap + lastEmptyRow && !isDungeonsRow && Object.keys(nextRndObj).length > 0) {        
+        rndObj = nextRndObj;
+        nextRndObj = {};
+        maxHeight = Math.max(rndObj.dungeons[0][2], rndObj.dungeons[1][2], rndObj.dungeons[2][2]);
+        minHeight = Math.min(rndObj.dungeons[0][2], rndObj.dungeons[1][2], rndObj.dungeons[2][2]);
+        isDungeonsRow = true;        
+        lastEmptyRow = i;
+        isVertAisles = [false, false, false];        
+      }
+      
+      if(i > minHeight + lastEmptyRow && !(isVertAisles[0] || isVertAisles[1] || isVertAisles[2])) {
+        nextRndObj.dungeons = createDungeonsArr();
+        if(Math.max(nextRndObj.dungeons[0][2], nextRndObj.dungeons[1][2], nextRndObj.dungeons[2][2]) + maxHeight + minGap + lastEmptyRow < boardHeight - 1) {
+          nextRndObj.startFirstAisle = randomInteger(2, 4);
+          nextRndObj.startSecondAisle = randomInteger(2, 4);
+        } else {
+          nextRndObj = {};
+        }
+      }
+      arr1[i].map((item, j) => {
+        if(i > 0) {
+          this.makeDungeonsGrid(i, j, rndObj, nextRndObj);
+        }
+      });
+    });
+    portalCoord = portalCoord ? portalCoord : [];
+    bossCoord = bossCoord ? bossCoord : [];
+    litArray = this.calcLitArray(heroCoord);
+    this.setState({
+      dungeonsCoord: dungeonsCoord,
+      healthCoord: healthCoord,
+      weaponCoord: weaponCoord,
+      easyEnemiesCoord: easyEnemiesCoord,
+      middleEnemiesCoord: middleEnemiesCoord,
+      heroCoord: heroCoord,
+      heroHealth: heroHealth,
+      portal: false,
+      portalCoord: portalCoord,
+      level: ++this.state.level,
+      bossCoord: bossCoord,
+      litArray: litArray
+    });
+  }
+  
+  componentDidMount() {
+    this.startGame();
+    window.addEventListener('keydown', this.moveHero.bind(this));
+  }
+  
+  render() {
+    if(arr1.length == 0) {
+      arr1 = new Array(boardHeight).fill(null);
+      arr1.map((item, i) => {
+        arr1[i] = new Array(boardWidth).fill(null);
+      });
+    }
+    let rowCol;
+    let grid = arr1.map((item, i) => {
+      let row = arr1[i].map((item, j) => {
+        rowCol = i + '|' + j;
+        if(this.state.isDarkness && this.state.litArray.indexOf(rowCol) == -1) {
+          return <div className='cell dark'></div>;          
+        }
+        if(this.state.healthCoord.indexOf(rowCol) != -1) {
+            return <div className='cell health'></div>;
+          } else if(this.state.heroCoord.indexOf(rowCol) != -1) {
+            return <div className='cell hero'></div>;
+          } else if(this.state.weaponCoord.indexOf(rowCol) != -1) {
+            return <div className='cell weapon'></div>;
+          } else if(this.state.easyEnemiesCoord.indexOf(rowCol) != -1) {
+            return <div className='cell easyEnemies'></div>;
+          } else if(this.state.middleEnemiesCoord.indexOf(rowCol) != -1) {
+            return <div className='cell middleEnemies'></div>;
+          } else if(this.state.portal && this.state.portalCoord.indexOf(rowCol) != -1) {
+            return <div className='cell portal'></div>;
+          } else if(this.state.boss && this.state.bossCoord.indexOf(rowCol) != -1) {
+            return <div className='cell boss'></div>;
+          } else if(this.state.dungeonsCoord.indexOf(rowCol) != -1) {
+            return <div className='cell dungeon'></div>;
+          } else {
+            return (<div key = {rowCol} className='cell'></div>);
+          }
+      });
+      return (<div key = {i} className = 'row'>{row}</div>);
+    });
+    return (
+      <div>
+        <div className = "wrapper">
+          <div className = "board">
+            {grid}
+          </div>
+          <GameInfo
+            message={this.state.resultMessage}
+            health={this.state.heroHealth}
+            weapon={this.state.weapon}
+            level={this.state.level}
+            damage={this.state.damage} />
+          <Button onClick={this.onClick.bind(this)} />
+        </div>
+      </div>
+    );
+  }
+};
+
+class Button extends React.Component {
+  constructor(props) {
+    super(props);
+    this.onClickBtn = this.onClickBtn.bind(this);
+  }
+  onClickBtn() {
+    this.props.onClick();
+  }
+  render() {
+    return (
+      <button onClick={this.onClickBtn}>Toggle darkness</button>
+    );
+  }
+  
+}
+
+const GameInfo = (props) => {
+  return (
+    <div className='gameInfo'>
+      <h2>Game info</h2>
+      <p>Event: <span>{props.message}</span></p>
+      <p>Health: <span>{props.health}</span></p>
+      <p>Weapon: <span>{props.weapon}</span></p>
+      <p>Level: <span>{props.level}</span></p>
+      <p>Damage: <span>{props.damage}</span></p>
+      <h2>Legend</h2>
+      <div><div className="cell hero"></div> - hero</div>
+      <div><div className="cell health"></div><span> - health</span></div>
+      <div><div className="cell weapon"></div><span> - weapon</span></div>
+      <div><div className="cell easyEnemies"></div><span> - easy enemies</span></div>
+      <div><div className="cell middleEnemies"></div><span> - middle enemies</span></div>
+      <div><div className="cell boss"></div><span> - boss</span></div>
+      <div><div className="cell portal"></div><span> - portal</span></div>
+    </div>
+  );
+};
+
+ReactDOM.render(<Board />, document.getElementById('app'));
+    </script>
+  </body>
+</html>
